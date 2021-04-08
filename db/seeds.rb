@@ -24,6 +24,7 @@ ActiveRecord::Base.transaction do
     User.create!(
       username: Faker::Internet.username,
       auth_token: Faker::Internet.unique.uuid,
+      email: Faker::Internet.unique.email,
       balance: rand(100)
     )
   end
