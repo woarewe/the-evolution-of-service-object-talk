@@ -15,7 +15,7 @@ module API
         if order
           render status: :ok, json: order.as_json
         else
-          render status: :unprocessable_entity, json: { error: "Something went wrong" }
+          render status: :unprocessable_entity, json: { errors: user.errors }
         end
       end
 

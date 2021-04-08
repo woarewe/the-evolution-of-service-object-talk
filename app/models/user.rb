@@ -6,25 +6,33 @@ class User < ApplicationRecord
 
   def submit_order(params)
     cart = Cart.find_by(id: params[:cart_id])
-    return if cart.nil?
+    if cart.nil?
+      errors.add(:cart, "not found")
+      return
+    end
 
     validator = AddressValidator.new(params[:address])
-    return if validator.invalid?
+    if validator.invalid?
+      errors.add(:address, validator.errors)
+      return
+    end
 
     address = Address.create!(validator.attributes)
 
-    return unless charge(cart.total)
-
-    order = Order.create(
-      total: cart.total,
-      cart: cart,
-      user: self,
-      summary: build_order_summary(cart),
-      shipping_address: address
-    )
-
-    OrderMailer.submitted_successfully(order)
-    order
+    if charge(cart.total)
+      order = Order.create(
+        total: cart.total,
+        cart: cart,
+        user: self,
+        summary: build_order_summary(cart),
+        shipping_address: address
+      )
+      OrderMailer.submitted_successfully(order)
+      order
+    else
+      errors.add(:user, "not enough money")
+      nil
+    end
   end
 
   private
