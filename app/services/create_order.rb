@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 class CreateOrder < ApplicationService
-  def self.call(params)
-    user = find_user!(params)
-    cart = find_cart!(params)
-    address_attributes = validate_address!(params)
-    address = create_address!(address_attributes)
+  def self.call(dependencies:, params:)
+    user = find_user!(dependencies, params)
+    cart = find_cart!(dependencies, params)
+    address_attributes = validate_address!(dependencies, params)
+    address = create_address!(dependencies, address_attributes)
     charge_user!(user, cart)
     order_summary = build_order_summary(cart)
-    order = create_order!(user, cart, address, order_summary)
-    notify_user(order)
+    order = create_order!(dependencies, user, cart, address, order_summary)
+    notify_user(dependencies, order)
     Success.new(order)
   rescue FailureError => error
     Failure.new(error.data)
@@ -17,26 +17,26 @@ class CreateOrder < ApplicationService
 
   private
 
-  def self.find_user!(params)
-    user = User.find_by(auth_token: params[:auth_token])
+  def self.find_user!(dependencies, params)
+    user = dependencies[:user_model].find_by(auth_token: params[:auth_token])
     raise FailureError.new("User not found") if user.nil?
     user
   end
 
-  def self.find_cart!(params)
-    cart = Cart.find_by(id: params[:cart_id])
+  def self.find_cart!(dependencies, params)
+    cart = dependencies[:cart_model].find_by(id: params[:cart_id])
     raise FailureError.new("Cart not found") if cart.nil?
     cart
   end
 
-  def self.validate_address!(params)
-    validator = AddressValidator.new(params[:address])
+  def self.validate_address!(dependencies, params)
+    validator = dependencies[:address_validator].new(params[:address])
     raise FailureError.new(validator.errors) if validator.invalid?
     validator.attributes
   end
 
-  def self.create_address!(address_params)
-    Address.create!(address_params)
+  def self.create_address!(dependencies, address_params)
+    dependencies[:address_model].create!(address_params)
   end
 
   def self.charge_user!(user, cart)
@@ -54,8 +54,8 @@ class CreateOrder < ApplicationService
     lines.join("\n")
   end
 
-  def self.create_order!(user, cart, address, order_summary)
-    Order.create!(
+  def self.create_order!(dependencies, user, cart, address, order_summary)
+    dependencies[:order_model].create!(
       total: cart.total,
       cart: cart,
       user: user,
@@ -64,7 +64,7 @@ class CreateOrder < ApplicationService
     )
   end
 
-  def self.notify_user(order)
-    OrderMailer.submitted_successfully(order)
+  def self.notify_user(dependencies, order)
+    dependencies[:order_mailer].submitted_successfully(order)
   end
 end
