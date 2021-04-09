@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
 class CreateOrder < ApplicationService
-  def self.call(params)
-    new.call(params)
+  def initialize(params)
+    @params = params
   end
 
-  def call(params)
-    @params = params
+  def call
     find_user!
     find_cart!
     validate_address!

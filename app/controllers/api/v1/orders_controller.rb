@@ -4,7 +4,7 @@ module API
   module V1
     class OrdersController < ApplicationController
       def create
-        result = CreateOrder.call(params.permit!) # or Creator.new.call(params.permit!)
+        result = CreateOrder.new(params.permit!).call
         if result.success?
           render status: :ok, json: result.data
         else
