@@ -2,6 +2,10 @@
 
 class CreateOrder < ApplicationService
   def self.call(params)
+    new.call(params)
+  end
+
+  def call(params)
     @params = params
     find_user!
     find_cart!
@@ -18,33 +22,33 @@ class CreateOrder < ApplicationService
 
   private
 
-  def self.find_user!
+  def find_user!
     @user = User.find_by(auth_token: @params[:auth_token])
     raise FailureError.new("User not found") if @user.nil?
   end
 
-  def self.find_cart!
+  def find_cart!
     @cart = Cart.find_by(id: @params[:cart_id])
     raise FailureError.new("Cart not found") if @cart.nil?
   end
 
-  def self.validate_address!
+  def validate_address!
     @validator = AddressValidator.new(@params[:address])
     raise FailureError.new(@validator.errors) if @validator.invalid?
   end
 
-  def self.create_address!
+  def create_address!
     @address = Address.create!(@validator.attributes)
   end
 
-  def self.charge_user!
+  def charge_user!
     @user.with_lock do
       raise FailureError.new("Not enough money") if @cart.total > @user.balance
       @user.update!(balance: @user.balance - @cart.total)
     end
   end
 
-  def self.build_order_summary
+  def build_order_summary
     lines = @cart.line_items.map do |line_item|
       "#{line_item.product.title}: #{line_item.product.unit_price}$ X #{line_item.quantity} = #{line_item.total}"
     end
@@ -52,7 +56,7 @@ class CreateOrder < ApplicationService
     @order_summary = lines.join("\n")
   end
 
-  def self.create_order!
+  def create_order!
     @order = Order.create!(
       total: @cart.total,
       cart: @cart,
@@ -62,7 +66,7 @@ class CreateOrder < ApplicationService
     )
   end
 
-  def self.notify_user
+  def notify_user
     OrderMailer.submitted_successfully(@order)
   end
 end
