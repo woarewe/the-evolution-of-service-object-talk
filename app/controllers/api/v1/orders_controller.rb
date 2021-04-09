@@ -6,9 +6,9 @@ module API
       def create
         result = CreateOrder.call(params: params.permit!)
         if result.success?
-          render status: :ok, json: result.data
+          render status: :ok, json: result.success.as_json
         else
-          render status: :unprocessable_entity, json: result.errors
+          render status: :unprocessable_entity, json: { errors: result.failure }
         end
       end
     end

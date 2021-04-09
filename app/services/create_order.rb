@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 class CreateOrder < ApplicationService
+  extend Dry::Monads[:result]
+  class << self
+    include Dry::Monads::Do.for(:call)
+  end
+
   DEFAULT_DEPENDENCIES = {
     user_model: User,
     order_model: Order,
@@ -13,48 +18,50 @@ class CreateOrder < ApplicationService
   def self.call(dependencies: {}, params:)
     dependencies = DEFAULT_DEPENDENCIES.merge(dependencies)
 
-    user = find_user!(dependencies, params)
-    cart = find_cart!(dependencies, params)
-    address_attributes = validate_address!(dependencies, params)
+    user = yield find_user(dependencies, params)
+    cart = yield find_cart(dependencies, params)
+    address_attributes = yield validate_address(dependencies, params)
     address = create_address!(dependencies, address_attributes)
-    charge_user!(user, cart)
+    user = yield charge_user(user, cart)
     order_summary = build_order_summary(cart)
     order = create_order!(dependencies, user, cart, address, order_summary)
     notify_user(dependencies, order)
-    Success.new(order)
-  rescue FailureError => error
-    Failure.new(error.data)
+    Success(order)
   end
 
   private
 
-  def self.find_user!(dependencies, params)
+  def self.find_user(dependencies, params)
     user = dependencies[:user_model].find_by(auth_token: params[:auth_token])
-    raise FailureError.new("User not found") if user.nil?
-    user
+    return Failure("User not found") if user.nil?
+
+    Success(user)
   end
 
-  def self.find_cart!(dependencies, params)
+  def self.find_cart(dependencies, params)
     cart = dependencies[:cart_model].find_by(id: params[:cart_id])
-    raise FailureError.new("Cart not found") if cart.nil?
-    cart
+    return Failure("Cart not found") if cart.nil?
+
+    Success(cart)
   end
 
-  def self.validate_address!(dependencies, params)
+  def self.validate_address(dependencies, params)
     validator = dependencies[:address_validator].new(params[:address])
-    raise FailureError.new(validator.errors) if validator.invalid?
-    validator.attributes
+    return Failure(validator.errors) if validator.invalid?
+
+    Success(validator.attributes)
   end
 
   def self.create_address!(dependencies, address_params)
     dependencies[:address_model].create!(address_params)
   end
 
-  def self.charge_user!(user, cart)
+  def self.charge_user(user, cart)
     user.with_lock do
-      raise FailureError.new("Not enough money") if cart.total > user.balance
+      return Failure("Not enough money") if cart.total > user.balance
       user.update!(balance: user.balance - cart.total)
     end
+    Success(user)
   end
 
   def self.build_order_summary(cart)
