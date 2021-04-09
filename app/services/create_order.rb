@@ -1,7 +1,18 @@
 # frozen_string_literal: true
 
 class CreateOrder < ApplicationService
-  def self.call(dependencies:, params:)
+  DEFAULT_DEPENDENCIES = {
+    user_model: User,
+    order_model: Order,
+    address_validator: AddressValidator,
+    address_model: Address,
+    order_mailer: OrderMailer,
+    cart_model: Cart
+  }.freeze
+
+  def self.call(dependencies: {}, params:)
+    dependencies = DEFAULT_DEPENDENCIES.merge(dependencies)
+
     user = find_user!(dependencies, params)
     cart = find_cart!(dependencies, params)
     address_attributes = validate_address!(dependencies, params)
