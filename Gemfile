@@ -35,3 +35,4 @@ end
 gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 
 gem 'dry-monads', '~> 1.3.5'
+gem 'dry-initializer', '~> 3.0.4'

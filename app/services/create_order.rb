@@ -1,25 +1,17 @@
 # frozen_string_literal: true
 
 class CreateOrder < ApplicationService
+  extend Dry::Initializer
+
   include Dry::Monads[:result]
   include Dry::Monads::Do.for(:call)
 
-  attr_reader :user_model
-  attr_reader :order_model
-  attr_reader :address_validator
-  attr_reader :order_mailer
-  attr_reader :address_model
-  attr_reader :cart_model
-
-  def initialize(user_model: User, order_model: Order, address_validator: AddressValidator, order_mailer: OrderMailer,
-                address_model: Address, cart_model: Cart)
-    @user_model = user_model
-    @order_model = order_model
-    @address_validator = address_validator
-    @order_mailer = order_mailer
-    @address_model = address_model
-    @cart_model = cart_model
-  end
+  option :user_model, default: -> { User }
+  option :order_model, default: -> { Order }
+  option :address_validator, default: -> { AddressValidator }
+  option :order_mailer, default: -> { OrderMailer }
+  option :address_model, default: -> { Address }
+  option :cart_model, default: -> { Cart }
 
   def call(params)
     user = yield find_user(params[:auth_token])
